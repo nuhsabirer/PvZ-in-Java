@@ -7,22 +7,30 @@ import java.awt.Graphics2D;
 import java.awt.Toolkit;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.util.ArrayList; // Added this import
 
 import javax.imageio.ImageIO;
 import javax.swing.JPanel;
 
+import entity.zombie.Zombie; // Added this import
+import entity.zombie.NormalZombie; // Added this import
+
 public class GamePanel extends JPanel implements Runnable {
 	private static final long serialVersionUID = 1L;
 	
-	//	Screen Properties
+	// Screen Properties
 	public final int screenWidth = 1400, screenHeight = 600;
 	public final int fps = 30;
 	
-	//	Thread
+	// Thread
 	Thread gameThread;
 	
-	//	Background Picture
-	private BufferedImage pVz_background;
+	// Background Picture
+	private BufferedImage bgElements, currentBg;
+	
+	// --- NEW: Entity Lists and Timers ---
+	private ArrayList<Zombie> zombies = new ArrayList<>();
+	private int testFrameCounter = 0; 
 	
 	public GamePanel() {
 		setPreferredSize(new Dimension(screenWidth, screenHeight));
@@ -31,10 +39,15 @@ public class GamePanel extends JPanel implements Runnable {
 		setFocusable(true);
 		
 		try {
-			pVz_background = ImageIO.read(getClass().getResource("/pVz_background.png"));
-		} catch(IOException | IllegalArgumentException exc) {
+			bgElements = ImageIO.read(getClass().getResource("/pvz_bg_elements.png"));
+			currentBg = bgElements.getSubimage(0, 0, screenWidth, screenHeight);	
+		} catch(IOException | IllegalArgumentException e) {
 			System.err.println("Background image could not be read.");
+			e.printStackTrace();
 		}
+		
+		// Spawn our test actor on the top lane, right side of the screen
+		zombies.add(new NormalZombie(1000, 80));
 	}
 	
 	@Override
@@ -42,7 +55,14 @@ public class GamePanel extends JPanel implements Runnable {
 		super.paintComponent(g);
 		
 		Graphics2D g2 = (Graphics2D) g;
-		g2.drawImage(pVz_background, 0, 0, null);
+		
+		// 1. Draw Background
+		g2.drawImage(currentBg, 0, 0, null);
+		
+		// 2. Draw all Zombies (after the background so they appear on top)
+		for (Zombie z : zombies) {
+			z.draw(g2);
+		}
 		
 		g2.dispose();
 	}
@@ -54,7 +74,6 @@ public class GamePanel extends JPanel implements Runnable {
 	
 	@Override
 	public void run() {
-		//	Game loop that runs ${fps} times every second.
 		double drawInterval = 1_000_000_000/fps;
 		double delta = 0;
 		long lastTime = System.nanoTime();
@@ -62,21 +81,17 @@ public class GamePanel extends JPanel implements Runnable {
 		
 		while(gameThread != null) {
 			currentTime = System.nanoTime();
-			
 			delta += (currentTime - lastTime) / drawInterval;
-			
 			lastTime = currentTime;
 			
 			if(delta >= 1) {
-				//	1: UPDATE
 				update();
-				//	2: DRAW
 				repaint();
-				Toolkit.getDefaultToolkit().sync();	//	Check README.txt for the reason behind this line.
+				Toolkit.getDefaultToolkit().sync();	
 				delta--;
 			}
 			try {
-				Thread.sleep(1);	//	Here to prevent the while loop to run billions of times every second.
+				Thread.sleep(1);	
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
@@ -84,6 +99,31 @@ public class GamePanel extends JPanel implements Runnable {
 	}
 	
 	private void update() {
-		//	Updating the values of elements such as their states, coordinates will happen here.
+		// Advance the timer by 1 frame
+		testFrameCounter++;
+		
+		for (Zombie z : zombies) {
+			
+			// The Director's Script (30 frames = 1 second)
+			if (testFrameCounter < 60) {
+				// 0 to 2 seconds
+				z.currentState = Zombie.State.IDLE;
+			} 
+			else if (testFrameCounter < 210) {
+				// 2 to 7 seconds (5 seconds total)
+				z.currentState = Zombie.State.WALKING;
+			} 
+			else if (testFrameCounter < 360) {
+				// 7 to 12 seconds (5 seconds total)
+				z.currentState = Zombie.State.EATING;
+			} 
+			else {
+				// 12+ seconds
+				z.currentState = Zombie.State.DYING;
+			}
+			
+			// Tell the zombie to process its movement and hitboxes
+			z.update();
+		}
 	}
 }
