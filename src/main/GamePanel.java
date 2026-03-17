@@ -30,7 +30,6 @@ public class GamePanel extends JPanel implements Runnable {
 	
 	// --- NEW: Entity Lists and Timers ---
 	private ArrayList<Zombie> zombies = new ArrayList<>();
-	private int testFrameCounter = 0; 
 	
 	public GamePanel() {
 		setPreferredSize(new Dimension(screenWidth, screenHeight));
@@ -99,11 +98,10 @@ public class GamePanel extends JPanel implements Runnable {
 	}
 	
 	private void update() {
-		// Advance the timer by 1 frame
-		testFrameCounter++;
-		
 		for (Zombie z : zombies) {
 			
+			z.currentState = Zombie.State.WALKING;
+			/*
 			// The Director's Script (30 frames = 1 second)
 			if (testFrameCounter < 60) {
 				// 0 to 2 seconds
@@ -121,7 +119,7 @@ public class GamePanel extends JPanel implements Runnable {
 				// 12+ seconds
 				z.currentState = Zombie.State.DYING;
 			}
-			
+			*/
 			// Tell the zombie to process its movement and hitboxes
 			z.update();
 		}
