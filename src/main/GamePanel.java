@@ -8,11 +8,14 @@ import java.awt.Toolkit;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.ArrayList; // Added this import
+import entity.projectile.Projectile;
 
 import javax.imageio.ImageIO;
 import javax.swing.JPanel;
 
 import entity.zombie.Zombie; // Added this import
+import entity.plant.Peashooter;
+import entity.plant.Plant;
 import entity.zombie.NormalZombie; // Added this import
 
 public class GamePanel extends JPanel implements Runnable {
@@ -30,6 +33,8 @@ public class GamePanel extends JPanel implements Runnable {
 	
 	// --- NEW: Entity Lists and Timers ---
 	private ArrayList<Zombie> zombies = new ArrayList<>();
+	private ArrayList<Plant> plants = new ArrayList<>();
+	public ArrayList<Projectile> projectiles = new ArrayList<>();
 	
 	public GamePanel() {
 		setPreferredSize(new Dimension(screenWidth, screenHeight));
@@ -47,21 +52,31 @@ public class GamePanel extends JPanel implements Runnable {
 		
 		// Spawn our test actor on the top lane, right side of the screen
 		zombies.add(new NormalZombie(1000, 80));
-	}
+		// Update the Peashooter spawn to pass "this" (the GamePanel itself)
+		plants.add(new Peashooter(this, 320, 80));	}
 	
 	@Override
 	protected void paintComponent(Graphics g) {
 		super.paintComponent(g);
 		
 		Graphics2D g2 = (Graphics2D) g;
+		// Draw background first, then projectiles, then plants and then zombies.
+		// This way everything looks natural
 		
-		// 1. Draw Background
 		g2.drawImage(currentBg, 0, 0, null);
 		
-		// 2. Draw all Zombies (after the background so they appear on top)
-		for (Zombie z : zombies) {
+		for(Projectile p : projectiles) {
+			p.draw(g2);
+		}
+		
+		for(Plant p : plants) {
+			p.draw(g2);
+		}
+		
+		for(Zombie z : zombies) {
 			z.draw(g2);
 		}
+		
 		
 		g2.dispose();
 	}
@@ -72,12 +87,14 @@ public class GamePanel extends JPanel implements Runnable {
 	}
 	
 	@Override
+	/**
+	 * Game loop is handled here. FPS and game loop is based on 30 ticks per seocnd.
+	 */
 	public void run() {
 		double drawInterval = 1_000_000_000/fps;
 		double delta = 0;
 		long lastTime = System.nanoTime();
 		long currentTime;
-		
 		while(gameThread != null) {
 			currentTime = System.nanoTime();
 			delta += (currentTime - lastTime) / drawInterval;
@@ -97,31 +114,75 @@ public class GamePanel extends JPanel implements Runnable {
 		}
 	}
 	
+	
+	/**
+	 * This method updates each Entity on the field and removes them if needed.
+	 * Every iteration had to be done with a backwards for loop (starting from the end)
+	 * 
+	 * Reason is, when I tried to do this with a normal for-each loop or a forwards loop,
+	 * I kept getting ConcurrentModificationException or out of bounds exception.
+	 * Doing it this way will prevent both, since on each iteration the size() is checked.
+	 */
 	private void update() {
-		for (Zombie z : zombies) {
+		
+		// 1. UPDATE PROJECTILES & CHECK HITS
+		for (int i = projectiles.size() - 1; i >= 0; i--) {
+			Projectile p = projectiles.get(i);
+			p.update();
 			
-			z.currentState = Zombie.State.WALKING;
-			/*
-			// The Director's Script (30 frames = 1 second)
-			if (testFrameCounter < 60) {
-				// 0 to 2 seconds
-				z.currentState = Zombie.State.IDLE;
-			} 
-			else if (testFrameCounter < 210) {
-				// 2 to 7 seconds (5 seconds total)
-				z.currentState = Zombie.State.WALKING;
-			} 
-			else if (testFrameCounter < 360) {
-				// 7 to 12 seconds (5 seconds total)
-				z.currentState = Zombie.State.EATING;
-			} 
-			else {
-				// 12+ seconds
-				z.currentState = Zombie.State.DYING;
+			// Check if this pea hit any zombie
+			for (Zombie z : zombies) {
+				if (p.collidesWith(z)) {
+					z.takeDamage(p.damage); // Zombie takes damage
+					p.isActive = false;     // Pea breaks
+					break;                  // A pea can only hit one zombie!
+				}
 			}
-			*/
-			// Tell the zombie to process its movement and hitboxes
+			
+			if (!p.isActive) {
+				projectiles.remove(i);
+			}
+		}
+		
+		// 2. UPDATE ZOMBIES & CHECK EATING
+		for (int i = zombies.size() - 1; i >= 0; i--) {
+			Zombie z = zombies.get(i);
+			boolean isEating = false;
+			
+			// Check if zombie has reached any plant
+			for (Plant plant : plants) {
+				if (z.collidesWith(plant)) {
+					isEating = true;
+					z.currentState = Zombie.State.EATING;
+					
+					// TODO later: Add an eating timer so it doesn't do damage every single frame
+					plant.takeDamage(1); 
+					break;
+				}
+			}
+			
+			if (!isEating) {
+				z.currentState = Zombie.State.WALKING;
+			}
+			
 			z.update();
+			
+			// If the zombie died from the peas, remove it!
+			// TODO later: Trigger DYING animation before removing
+			if (z.isDead()) {
+				zombies.remove(i);
+			}
+		}
+		
+		// 3. UPDATE PLANTS & HANDLE DEATH
+		for (int i = plants.size() - 1; i >= 0; i--) {
+			Plant p = plants.get(i);
+			p.update();
+			
+			// If the zombie ate the plant completely, remove it!
+			if (p.isDead()) {
+				plants.remove(i);
+			}
 		}
 	}
 }

@@ -35,9 +35,27 @@ public abstract class Entity {
 	 * collision logic of bullets (only bullets that are on the same line with the
 	 * zombie should damage it)
 	 * 
+	 * For plants, hitbox is drawn as a thin wall in front of the plant. Offsets and
+	 * heights are tweaked so that no hitbox will collide with other
+	 * 
+	 * For projectiles, they have the same coordinates and size as the visible projecile,
+	 * but rectangle instead of circle
+	 * 
 	 * Offset is used to draw the hitbox over the legs
 	 */
 	public void updateHitBox() {
 		hitBox.setBounds((int)x + xOffset, (int)y + yOffset, width, height);
+	}
+	
+	/**
+	 * Universal collision detector to be used with other entities' hitboxes
+	 * @param other the other Entity to check collision with
+	 * @return true if hitboxes collide, false otherwise
+	 */
+	public boolean collidesWith(Entity other) {
+		if (this.hitBox != null && other.hitBox != null) {
+			return this.hitBox.intersects(other.hitBox);
+		}
+		return false;
 	}
 }

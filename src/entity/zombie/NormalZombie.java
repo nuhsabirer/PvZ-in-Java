@@ -1,7 +1,6 @@
 package entity.zombie;
 
 import java.awt.image.BufferedImage;
-import javax.imageio.ImageIO;
 
 public class NormalZombie extends Zombie {
 	
@@ -14,20 +13,30 @@ public class NormalZombie extends Zombie {
 	private int frameTick = 0;
 	private State previousState;    // To detect when we switch actions
 	
+	/**
+	 * Creates a zombie at the given coordinates. Since every sprite is 250x200,
+	 * we need to create an offsetting logic so that the zombie can be created and
+	 * seen exactly at the given coordinates.
+	 * @param startX
+	 * @param startY
+	 */
 	public NormalZombie(double startX, double startY) {
 		super(startX, startY);
-		
 		// STATS
 		this.maxHealth = 200;
 		this.currentHealth = maxHealth;
-		this.speed = 0.5;
-		this.damage = 10;
+		this.speed = 0.8;
+		this.damage = 30;
 		
 		// SIZE
 		this.width = 100;
 		this.height = 100;
 		this.xOffset = 100;
 		this.yOffset = 100;
+		
+		// Offsetting logic
+		this.x -= this.xOffset;
+		this.y -= this.yOffset;
 		
 		this.previousState = this.currentState;
 		
