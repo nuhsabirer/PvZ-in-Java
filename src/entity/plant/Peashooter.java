@@ -57,7 +57,7 @@ public class Peashooter extends Plant {
 		shootTimer++;
 		if (shootTimer >= 45) { 
 			// Spawn a Pea! We offset the x and y slightly so it comes out of the mouth
-			gp.projectiles.add(new Pea(this.x + this.xOffset + 20, this.y + this.yOffset + 5)); 
+			gp.projectiles.add(new Pea(this.x + this.xOffset + 20, this.y + this.yOffset - 20)); 
 			shootTimer = 0; 
 		}
 	}
